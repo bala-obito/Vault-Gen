@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VaultGen — Password Intelligence Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#090C11;
+    --bg-2:#0C1017;
+    --panel:rgba(16,21,29,0.72);
+    --panel-solid:#10151D;
+    --border:#1D2530;
+    --border-bright:#2A3644;
+    --text:#ECF1F7;
+    --muted:#78859A;
+    --dim:#4B5568;
+    --accent:#5EEAF0;
+    --accent-soft:rgba(94,234,240,0.12);
+    --accent-2:#A78BFA;
+    --accent-2-soft:rgba(167,139,250,0.12);
+    --warn:#FBBF24;
+    --danger:#FB6F6F;
+    --display:'Space Grotesk', sans-serif;
+    --mono:'JetBrains Mono', monospace;
+    --sans:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      linear-gradient(var(--bg-2) 1px, transparent 1px) 0 0 / 100% 42px,
+      linear-gradient(90deg, var(--bg-2) 1px, transparent 1px) 0 0 / 42px 100%,
+      radial-gradient(circle at 20% 0%, rgba(94,234,240,0.07), transparent 42%),
+      radial-gradient(circle at 85% 30%, rgba(167,139,250,0.06), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:0 0 90px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 20px;}
+
+  /* ===== Header ===== */
+  header{
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(9,12,17,0.9), rgba(9,12,17,0.4));
+    backdrop-filter:blur(6px);
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";
+    position:absolute;
+    top:0; left:-100%;
+    width:60%; height:100%;
+    background:linear-gradient(90deg, transparent, rgba(94,234,240,0.06), transparent);
+    animation:sweep 7s linear infinite;
+  }
+  @keyframes sweep{
+    0%{left:-60%;}
+    100%{left:110%;}
+  }
+  .header-inner{
+    max-width:760px;margin:0 auto;padding:20px 20px;
+    display:flex;align-items:center;justify-content:space-between;
+    position:relative;z-index:1;
+  }
+  .logo{display:flex;align-items:center;gap:10px;}
+  .logo svg{width:26px;height:26px;flex-shrink:0;}
+  .logo-text{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:-0.01em;
+  }
+  .logo-text b{color:var(--accent);font-weight:700;}
+  .header-badges{display:flex;align-items:center;gap:8px;}
+  .badge{
+    display:flex;align-items:center;gap:7px;
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:0.08em;
+    color:var(--muted);
+    border:1px solid var(--border-bright);
+    border-radius:100px;
+    padding:6px 12px;
+  }
+  .badge-id{color:var(--dim);}
+  .badge-id #session-id{color:var(--accent-2);}
+  @media (max-width:480px){
+    .badge-id{display:none;}
+  }
+  .badge .pulse{
+    width:6px;height:6px;
+    background:var(--accent);
+    border-radius:50%;
+    box-shadow:0 0 6px var(--accent);
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;}
+    50%{opacity:0.35;}
+  }
+
+  /* ===== Hero ===== */
+  .hero{padding:56px 0 40px;}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11.5px;
+    letter-spacing:0.16em;
+    color:var(--accent-2);
+    text-transform:uppercase;
+    margin-bottom:16px;
+  }
+  h1{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(30px,5.2vw,46px);
+    line-height:1.12;
+    letter-spacing:-0.015em;
+    margin:0 0 16px;
+  }
+  h1 em{
+    font-style:normal;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:16px;
+    line-height:1.65;
+    max-width:52ch;
+    margin:0;
+  }
+
+  /* ===== Panel shell ===== */
+  .panel{
+    position:relative;
+    background:var(--panel);
+    backdrop-filter:blur(10px);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:32px;
+    margin-bottom:28px;
+  }
+  .panel::before, .panel::after,
+  .corner-tl, .corner-br{
+    content:"";
+    position:absolute;
+    width:16px;height:16px;
+    pointer-events:none;
+  }
+  .panel::before{ /* top-left */
+    top:-1px;left:-1px;
+    border-top:2px solid var(--accent-corner, var(--accent));
+    border-left:2px solid var(--accent-corner, var(--accent));
+  }
+  .panel::after{ /* bottom-right */
+    bottom:-1px;right:-1px;
+    border-bottom:2px solid var(--accent-corner, var(--accent));
+    border-right:2px solid var(--accent-corner, var(--accent));
+  }
+  .panel.generator{--accent-corner:var(--accent-2);}
+
+  .panel-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:26px;
+  }
+  .panel-title{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:0.02em;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .panel-title .tag{
+    font-family:var(--mono);
+    font-size:10px;
+    color:var(--bg);
+    background:var(--accent);
+    padding:2px 7px;
+    border-radius:3px;
+    letter-spacing:0.06em;
+  }
+  .panel.generator .panel-title .tag{background:var(--accent-2);}
+  .panel-index{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--dim);
+  }
+
+  /* ===== Checker: input ===== */
+  .field-row{display:flex;gap:10px;margin-bottom:28px;}
+  #pw-input{
+    flex:1;
+    background:var(--panel-solid);
+    border:1px solid var(--border-bright);
+    border-radius:4px;
+    padding:15px 16px;
+    font-family:var(--mono);
+    font-size:15.5px;
+    color:var(--text);
+    outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  #pw-input::placeholder{color:var(--dim);}
+  #pw-input:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .icon-btn{
+    background:var(--panel-solid);
+    border:1px solid var(--border-bright);
+    border-radius:4px;
+    color:var(--muted);
+    width:64px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.04em;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .icon-btn:hover{color:var(--text);border-color:var(--accent);}
+  .icon-btn:focus-visible, #pw-input:focus-visible, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent);
+    outline-offset:2px;
+  }
+
+  /* ===== Dial + checks layout ===== */
+  .analysis-grid{
+    display:grid;
+    grid-template-columns:150px 1fr;
+    gap:28px;
+    align-items:center;
+    margin-bottom:8px;
+  }
+  .dial-wrap{
+    position:relative;
+    width:140px;height:140px;
+  }
+  .dial{width:140px;height:140px;transform:rotate(-90deg);}
+  .dial-ticks{
+    fill:none;stroke:var(--border-bright);stroke-width:1;
+    stroke-dasharray:1.6 8.2;
+  }
+  .dial-track{
+    fill:none;stroke:var(--border);stroke-width:6;
+  }
+  .dial-progress{
+    fill:none;stroke:var(--dim);stroke-width:6;
+    stroke-linecap:round;
+    stroke-dasharray:364.4;
+    stroke-dashoffset:364.4;
+    transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1), stroke .3s ease;
+  }
+  .dial-center{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+  }
+  .dial-bits{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:26px;
+    line-height:1;
+    color:var(--text);
+  }
+  .dial-unit{
+    font-family:var(--mono);
+    font-size:9.5px;
+    letter-spacing:0.12em;
+    color:var(--dim);
+    margin-top:4px;
+  }
+
+  .status-col .status-label{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:19px;
+    margin-bottom:6px;
+    color:var(--muted);
+  }
+  .status-col .status-desc{
+    font-family:var(--sans);
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.5;
+  }
+  .status-col .status-crack{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:12px;
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.03em;
+    color:var(--dim);
+    border-top:1px solid var(--border);
+    padding-top:12px;
+  }
+  .status-col .status-crack b{
+    color:var(--text);
+    font-weight:600;
+  }
+
+  .checks{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px 18px;
+    margin-top:26px;
+    padding-top:26px;
+    border-top:1px solid var(--border);
+  }
+  .check-item{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    font-size:13px;
+    color:var(--dim);
+    font-family:var(--mono);
+  }
+  .check-item .dot{
+    width:14px;height:14px;
+    border-radius:2px;
+    border:1.5px solid var(--border-bright);
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:9px;
+    color:transparent;
+  }
+  .check-item.pass{color:var(--text);}
+  .check-item.pass .dot{
+    background:var(--accent-soft);
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+  .flags{
+    margin-top:18px;
+    padding-top:18px;
+    border-top:1px solid var(--border);
+  }
+  .flag{
+    font-size:12.5px;
+    font-family:var(--mono);
+    color:var(--warn);
+    display:flex;
+    gap:8px;
+    margin-bottom:7px;
+    line-height:1.5;
+  }
+  .flag:last-child{margin-bottom:0;}
+
+  /* ===== Suggestions / rewrite ===== */
+  .suggestions{
+    position:relative;
+    margin:0 0 28px;
+    padding:18px 18px 16px;
+    border-radius:6px;
+    border:1px solid var(--border-bright);
+    background:
+      linear-gradient(160deg, rgba(94,234,240,0.055), rgba(167,139,250,0.045)),
+      var(--panel-solid);
+    overflow:hidden;
+    animation:panelIn .3s cubic-bezier(.16,1,.3,1);
+  }
+  .suggestions::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent));
+    background-size:200% 100%;
+    animation:gradientSlide 4s linear infinite;
+  }
+  @keyframes gradientSlide{
+    0%{background-position:0% 0;}
+    100%{background-position:200% 0;}
+  }
+  @keyframes panelIn{
+    from{opacity:0; transform:translateY(-4px); max-height:0;}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .suggestions-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:13px;
+  }
+  .suggestions-title{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:0.07em;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .suggestions-title .dot-live{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--accent);
+    box-shadow:0 0 8px 1px var(--accent);
+    flex-shrink:0;
+    animation:pulse 2s ease-in-out infinite;
+  }
+  .suggestions-refresh{
+    background:none;
+    border:1px solid var(--border-bright);
+    border-radius:5px;
+    color:var(--muted);
+    width:28px;height:28px;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    transition:all .18s ease;
+    flex-shrink:0;
+  }
+  .suggestions-refresh svg{width:13px;height:13px;transition:transform .4s cubic-bezier(.4,0,.2,1);}
+  .suggestions-refresh:hover{color:var(--accent);border-color:var(--accent);box-shadow:0 0 12px var(--accent-soft);}
+  .suggestions-refresh:hover svg{transform:rotate(180deg);}
+  .suggestions-refresh:active svg{transform:rotate(220deg);}
+  .suggestion-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .suggestion-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    background:rgba(9,12,17,0.55);
+    border:1px solid var(--border-bright);
+    border-radius:5px;
+    padding:11px 12px;
+    animation:suggestIn .32s cubic-bezier(.16,1,.3,1) backwards;
+    transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  }
+  .suggestion-item:nth-child(1){animation-delay:0s;}
+  .suggestion-item:nth-child(2){animation-delay:.05s;}
+  .suggestion-item:nth-child(3){animation-delay:.1s;}
+  .suggestion-item:hover{
+    border-color:var(--accent);
+    transform:translateY(-1px);
+    box-shadow:0 4px 16px -6px rgba(94,234,240,0.35);
+  }
+  @keyframes suggestIn{
+    from{opacity:0; transform:translateY(-4px) scale(0.98);}
+    to{opacity:1; transform:translateY(0) scale(1);}
+  }
+  .suggestion-text{
+    font-family:var(--mono);
+    font-size:13.5px;
+    letter-spacing:0.01em;
+    color:var(--text);
+    word-break:break-all;
+  }
+  .suggestion-copy{
+    flex-shrink:0;
+    background:none;
+    border:1px solid var(--border-bright);
+    border-radius:3px;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:0.05em;
+    padding:7px 11px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .suggestion-copy:hover{color:var(--bg);background:var(--accent);border-color:var(--accent);box-shadow:0 0 10px var(--accent-soft);}
+  .suggestion-copy.copied{color:var(--bg);background:var(--accent);border-color:var(--accent);}
+  .suggestion-item.fresh{
+    border-color:var(--accent-2);
+    background:rgba(167,139,250,0.08);
+  }
+  .suggestion-item.fresh:hover{
+    box-shadow:0 4px 16px -6px rgba(167,139,250,0.4);
+  }
+  .suggestion-item.fresh .suggestion-text{color:var(--accent-2);}
+  .suggestion-item.fresh .suggestion-copy:hover{border-color:var(--accent-2);background:var(--accent-2);color:var(--bg);box-shadow:0 0 10px var(--accent-2-soft);}
+  .suggestion-fresh-btn{
+    width:100%;
+    background:none;
+    border:1px dashed var(--border-bright);
+    border-radius:5px;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:11.5px;
+    letter-spacing:0.03em;
+    padding:12px;
+    cursor:pointer;
+    transition:all .15s ease;
+    display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .suggestion-fresh-btn:hover{color:var(--accent-2);border-color:var(--accent-2);border-style:solid;box-shadow:0 0 14px -4px rgba(167,139,250,0.5);}
+  .suggestion-fresh-btn svg{width:13px;height:13px;}
+
+  /* ===== Generator ===== */
+  .row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .row label{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:0.04em;}
+  #length-val{font-family:var(--mono);color:var(--accent-2);font-weight:700;font-size:14px;}
+  input[type="range"]{
+    width:100%;-webkit-appearance:none;height:3px;
+    background:var(--border-bright);border-radius:2px;margin:0 0 26px;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:2px;
+    background:var(--accent-2);cursor:pointer;
+    box-shadow:0 0 0 4px var(--accent-2-soft);
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:2px;border:none;
+    background:var(--accent-2);cursor:pointer;
+    box-shadow:0 0 0 4px var(--accent-2-soft);
+  }
+  .toggles{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:10px 16px;margin-bottom:26px;
+  }
+  .toggle{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--panel-solid);border:1px solid var(--border-bright);
+    border-radius:4px;padding:12px 14px;cursor:pointer;user-select:none;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .toggle:hover{border-color:var(--accent-2);}
+  .toggle:has(input:checked){background:rgba(167,139,250,0.05);}
+  .toggle span{font-size:12.5px;font-family:var(--mono);color:var(--muted);}
+  .switch{
+    width:32px;height:18px;background:var(--border-bright);
+    border-radius:2px;position:relative;transition:background .15s ease;flex-shrink:0;
+  }
+  .switch::after{
+    content:"";position:absolute;top:2px;left:2px;
+    width:14px;height:14px;background:var(--dim);border-radius:1px;
+    transition:all .15s ease;
+  }
+  .toggle input{display:none;}
+  .toggle input:checked + .switch{background:var(--accent-2-soft);border:1px solid var(--accent-2);}
+  .toggle input:checked + .switch::after{transform:translateX(13px);background:var(--accent-2);}
+
+  .output{margin-bottom:18px;}
+  #pw-output{
+    background:var(--panel-solid);
+    border:1px solid var(--border-bright);
+    border-radius:4px;
+    padding:18px;
+    font-family:var(--mono);
+    font-size:17px;
+    letter-spacing:0.02em;
+    color:var(--accent-2);
+    word-break:break-all;
+    min-height:56px;
+    display:flex;
+    align-items:center;
+  }
+  .btn-row{display:flex;gap:10px;}
+  button.primary{
+    flex:1;
+    background:var(--accent-2);
+    color:#0B0C14;
+    border:none;
+    border-radius:4px;
+    padding:15px;
+    font-family:var(--display);
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    transition:filter .15s ease, transform .1s ease;
+  }
+  button.primary:hover{filter:brightness(1.1);}
+  button.primary:active{transform:scale(0.99);}
+  .copy-btn{
+    width:80px;
+    font-family:var(--mono);
+    font-size:11px;
+  }
+  .copy-btn.copied{color:var(--accent);border-color:var(--accent);}
+
+  footer{
+    text-align:center;
+    color:var(--dim);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+    margin-top:8px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+  footer .pulse{
+    width:5px;height:5px;background:var(--accent);border-radius:50%;
+    box-shadow:0 0 6px var(--accent);
+  }
+
+  @media (max-width:520px){
+    .analysis-grid{grid-template-columns:1fr;justify-items:center;text-align:center;}
+    .checks, .toggles{grid-template-columns:1fr;}
+    .panel{padding:22px;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    header::after{animation:none;}
+    .badge .pulse{animation:none;}
+    .dial-progress{transition:none;}
+  }
+
+  /* ===== Module select screen ===== */
+  .select-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    margin-bottom:8px;
+  }
+  .option-card{
+    position:relative;
+    background:var(--panel);
+    backdrop-filter:blur(10px);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:30px 24px;
+    text-align:left;
+    cursor:pointer;
+    font-family:inherit;
+    color:var(--text);
+    transition:border-color .18s ease, transform .12s ease, background .18s ease;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+  .option-card::before, .option-card::after{
+    content:"";
+    position:absolute;
+    width:14px;height:14px;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity .18s ease;
+  }
+  .option-card::before{top:-1px;left:-1px;border-top:2px solid var(--accent-card,var(--accent));border-left:2px solid var(--accent-card,var(--accent));}
+  .option-card::after{bottom:-1px;right:-1px;border-bottom:2px solid var(--accent-card,var(--accent));border-right:2px solid var(--accent-card,var(--accent));}
+  .option-card:hover, .option-card:focus-visible{
+    border-color:var(--accent-card,var(--accent));
+    transform:translateY(-2px);
+    outline:none;
+  }
+  .option-card:hover::before, .option-card:hover::after,
+  .option-card:focus-visible::before, .option-card:focus-visible::after{opacity:1;}
+  .option-card.generate{--accent-card:var(--accent-2);}
+  .option-icon{
+    width:38px;height:38px;
+    border-radius:4px;
+    background:var(--accent-soft);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .option-card.generate .option-icon{background:var(--accent-2-soft);}
+  .option-icon svg{width:20px;height:20px;}
+  .option-title{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:18px;
+  }
+  .option-desc{
+    font-family:var(--sans);
+    font-size:13px;
+    color:var(--muted);
+    line-height:1.55;
+  }
+  .option-cta{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:var(--accent-card,var(--accent));
+    margin-top:auto;
+    padding-top:6px;
+  }
+
+  .nav-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:0 0 22px;
+    flex-wrap:wrap;
+  }
+  .back-nav{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.05em;
+    cursor:pointer;
+    padding:6px 2px;
+    transition:color .15s ease, transform .15s ease;
+  }
+  .back-nav:hover{color:var(--text);transform:translateX(-2px);}
+  .back-nav svg{width:14px;height:14px;}
+
+  .switch-nav{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    background:none;
+    border:1px solid var(--border-bright);
+    border-radius:100px;
+    color:var(--muted);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.05em;
+    cursor:pointer;
+    padding:7px 13px;
+    transition:all .15s ease;
+  }
+  .switch-nav:hover{color:var(--bg);border-color:var(--switch-accent, var(--accent));background:var(--switch-accent, var(--accent));}
+  #back-from-checker + .switch-nav{--switch-accent:var(--accent-2);}
+  #back-from-generator + .switch-nav{--switch-accent:var(--accent);}
+  .switch-nav svg{width:12px;height:12px;transition:transform .15s ease;}
+  .switch-nav:hover svg{transform:translateX(2px);}
+
+  #screen-select.hidden,
+  #screen-checker.hidden,
+  #screen-generator.hidden{
+    display:none;
+  }
+
+  .screen{
+    animation:screenIn .32s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes screenIn{
+    from{opacity:0; transform:translateY(8px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .screen.leaving{
+    animation:screenOut .18s cubic-bezier(.4,0,1,1) forwards;
+  }
+  @keyframes screenOut{
+    from{opacity:1; transform:translateY(0);}
+    to{opacity:0; transform:translateY(-6px);}
+  }
+
+  @media (max-width:560px){
+    .select-grid{grid-template-columns:1fr;}
+    .switch-nav span.full{display:none;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .screen, .screen.leaving{animation:none;}
+  }
+
+  /* ===== Creator credit ===== */
+  .creator{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-top:28px;
+    padding:18px 22px;
+    background:var(--panel);
+    backdrop-filter:blur(10px);
+    border:1px solid var(--border);
+    border-radius:4px;
+    position:relative;
+  }
+  .creator::before{
+    content:"";
+    position:absolute;
+    top:-1px;left:-1px;
+    width:14px;height:14px;
+    border-top:2px solid var(--accent-2);
+    border-left:2px solid var(--accent-2);
+    pointer-events:none;
+  }
+  .creator-label{
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:0.14em;
+    color:var(--dim);
+    text-transform:uppercase;
+    margin-bottom:5px;
+  }
+  .creator-name{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:-0.01em;
+  }
+  .creator-name em{
+    font-style:normal;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+  }
+  .github-link{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    flex-shrink:0;
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.05em;
+    color:var(--muted);
+    text-decoration:none;
+    border:1px solid var(--border-bright);
+    border-radius:100px;
+    padding:9px 16px;
+    transition:all .15s ease;
+  }
+  .github-link svg{width:16px;height:16px;fill:currentColor;}
+  .github-link:hover, .github-link:focus-visible{
+    color:var(--bg);
+    background:var(--accent-2);
+    border-color:var(--accent-2);
+    box-shadow:0 0 14px var(--accent-2-soft);
+    outline:none;
+  }
+  footer a{color:var(--muted);text-decoration:none;border-bottom:1px dotted var(--dim);transition:color .15s ease;}
+  footer a:hover{color:var(--accent-2);}
+  @media (max-width:560px){
+    .creator{flex-direction:column;align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 2L28 7V15C28 22.5 22.8 27.8 16 30C9.2 27.8 4 22.5 4 15V7L16 2Z" stroke="#5EEAF0" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="16" cy="15" r="3.4" stroke="#A78BFA" stroke-width="2"/>
+        <path d="M16 18.4V22.5" stroke="#A78BFA" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="logo-text">Vault<b>Gen</b></span>
+    </div>
+    <div class="header-badges">
+      <div class="badge"><span class="pulse"></span>LOCAL SESSION</div>
+      <div class="badge badge-id" id="session-badge">SID <span id="session-id">····••••</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- SCREEN: MODULE SELECT -->
+  <div id="screen-select" class="screen">
+    <div class="hero">
+      <div class="eyebrow">Password Intelligence Console</div>
+      <h1>Analyze the weak. <em>Forge the strong.</em></h1>
+      <p class="sub">Choose a module to begin. Every calculation happens on-device — nothing is transmitted or logged.</p>
+    </div>
+
+    <div class="select-grid">
+      <button class="option-card check" id="select-checker" type="button">
+        <div class="option-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="7" stroke="#5EEAF0" stroke-width="2"/>
+            <path d="M20 20L16.5 16.5" stroke="#5EEAF0" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="option-title">Check Strength</div>
+        <div class="option-desc">Scan an existing password for entropy, weak patterns, and leaked-credential matches.</div>
+        <div class="option-cta">RUN SCAN →</div>
+      </button>
+
+      <button class="option-card generate" id="select-generator" type="button">
+        <div class="option-icon">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2L21 7V13C21 17.5 17 20.7 12 22C7 20.7 3 17.5 3 13V7L12 2Z" stroke="#A78BFA" stroke-width="2" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="option-title">Generate Password</div>
+        <div class="option-desc">Forge a new password from cryptographically secure randomness, tuned to your rules.</div>
+        <div class="option-cta">OPEN FORGE →</div>
+      </button>
+    </div>
+
+    <div class="creator">
+      <div>
+        <div class="creator-label">Created by</div>
+        <div class="creator-name"><em>Balamurugan</em></div>
+      </div>
+      <a class="github-link" href="https://github.com/bala-obito" target="_blank" rel="noopener noreferrer" aria-label="Balamurugan on GitHub">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.03 1.76 2.69 1.25 3.35.96.1-.74.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.62 1.59.23 2.76.11 3.05.74.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.51 11.51 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg>
+        github.com/bala-obito
+      </a>
+    </div>
+  </div>
+
+  <!-- SCREEN: CHECKER -->
+  <div id="screen-checker" class="hidden screen">
+    <div class="nav-row">
+      <button class="back-nav" id="back-from-checker" type="button">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        BACK TO MODULES
+      </button>
+      <button class="switch-nav" id="jump-to-generator" type="button">
+        <span class="full">SWITCH TO</span> FORGE
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="panel checker">
+      <div class="panel-head">
+        <div class="panel-title">Strength Analysis <span class="tag">SCAN</span></div>
+        <div class="panel-index">MODULE_01</div>
+      </div>
+
+      <div class="field-row">
+        <input type="password" id="pw-input" placeholder="Enter password to scan" autocomplete="off" spellcheck="false">
+        <button class="icon-btn" id="toggle-visibility" type="button" aria-label="Show password">SHOW</button>
+      </div>
+
+      <div class="suggestions" id="suggestions" style="display:none;">
+        <div class="suggestions-head">
+          <span class="suggestions-title"><span class="dot-live"></span>SUGGESTED REWRITES</span>
+          <button class="suggestions-refresh" id="btn-resuggest" type="button" aria-label="Regenerate suggestions">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4V9H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.6 15A8 8 0 1 0 6 7.3L4 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="suggestion-list" id="suggestion-list"></div>
+        <button class="suggestion-fresh-btn" id="btn-fresh-suggestion" type="button">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L21 7V13C21 17.5 17 20.7 12 22C7 20.7 3 17.5 3 13V7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Suggest an unrelated strong password
+        </button>
+      </div>
+
+      <div class="analysis-grid">
+        <div class="dial-wrap">
+          <svg class="dial" viewBox="0 0 140 140">
+            <circle class="dial-ticks" cx="70" cy="70" r="66"/>
+            <circle class="dial-track" cx="70" cy="70" r="58"/>
+            <circle class="dial-progress" id="dial-progress" cx="70" cy="70" r="58"/>
+          </svg>
+          <div class="dial-center">
+            <div class="dial-bits" id="dial-bits">0</div>
+            <div class="dial-unit">BITS</div>
+          </div>
+        </div>
+        <div class="status-col">
+          <div class="status-label" id="status-label">STANDBY</div>
+          <div class="status-desc" id="status-desc">Awaiting input to begin entropy scan.</div>
+          <div class="status-crack" id="status-crack" style="display:none;">EST. CRACK TIME <b id="crack-time">—</b></div>
+        </div>
+      </div>
+
+      <div class="checks">
+        <div class="check-item" id="chk-length"><span class="dot">✓</span>12+ characters</div>
+        <div class="check-item" id="chk-upper"><span class="dot">✓</span>Uppercase letter</div>
+        <div class="check-item" id="chk-lower"><span class="dot">✓</span>Lowercase letter</div>
+        <div class="check-item" id="chk-number"><span class="dot">✓</span>Number</div>
+        <div class="check-item" id="chk-symbol"><span class="dot">✓</span>Symbol</div>
+        <div class="check-item" id="chk-unique"><span class="dot">✓</span>No repeated runs</div>
+      </div>
+
+      <div class="flags" id="flags" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN: GENERATOR -->
+  <div id="screen-generator" class="hidden screen">
+    <div class="nav-row">
+      <button class="back-nav" id="back-from-generator" type="button">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        BACK TO MODULES
+      </button>
+      <button class="switch-nav" id="jump-to-checker" type="button">
+        <span class="full">SWITCH TO</span> SCAN
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="panel generator">
+      <div class="panel-head">
+        <div class="panel-title">Generate Credential <span class="tag">FORGE</span></div>
+        <div class="panel-index">MODULE_02</div>
+      </div>
+
+      <div class="row">
+        <label for="length-slider">LENGTH</label>
+        <span id="length-val">16</span>
+      </div>
+      <input type="range" id="length-slider" min="8" max="32" value="16">
+
+      <div class="toggles">
+        <label class="toggle">
+          <span>UPPERCASE A–Z</span>
+          <input type="checkbox" id="opt-upper" checked><div class="switch"></div>
+        </label>
+        <label class="toggle">
+          <span>LOWERCASE a–z</span>
+          <input type="checkbox" id="opt-lower" checked><div class="switch"></div>
+        </label>
+        <label class="toggle">
+          <span>NUMBERS 0–9</span>
+          <input type="checkbox" id="opt-number" checked><div class="switch"></div>
+        </label>
+        <label class="toggle">
+          <span>SYMBOLS !@#$</span>
+          <input type="checkbox" id="opt-symbol" checked><div class="switch"></div>
+        </label>
+        <label class="toggle" style="grid-column:1 / -1;">
+          <span>EXCLUDE AMBIGUOUS (I l 1 O 0)</span>
+          <input type="checkbox" id="opt-ambiguous"><div class="switch"></div>
+        </label>
+      </div>
+
+      <div class="output">
+        <div id="pw-output">READY</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="primary" id="btn-generate" type="button">Generate credential</button>
+        <button class="icon-btn copy-btn" id="btn-copy" type="button" aria-label="Copy password">COPY</button>
+      </div>
+    </div>
+  </div>
+
+  <footer><span class="pulse"></span>RUNS ENTIRELY IN-BROWSER — NO DATA STORED OR SENT &nbsp;·&nbsp; BUILT BY <a href="https://github.com/bala-obito" target="_blank" rel="noopener noreferrer">BALAMURUGAN</a></footer>
+</div>
+
+<script>
+// ---------- Screen routing ----------
+const screens = {
+  select: document.getElementById('screen-select'),
+  checker: document.getElementById('screen-checker'),
+  generator: document.getElementById('screen-generator'),
+};
+const prefersReducedMotionNav = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let activeScreen = 'select';
+
+function showScreen(name){
+  if (name === activeScreen) return;
+  const current = screens[activeScreen];
+  const next = screens[name];
+
+  const swap = () => {
+    current.classList.add('hidden');
+    current.classList.remove('leaving');
+    next.classList.remove('hidden');
+    activeScreen = name;
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    if (name === 'checker') pwInput.focus({ preventScroll: true });
+  };
+
+  if (prefersReducedMotionNav) {
+    swap();
+    return;
+  }
+  current.classList.add('leaving');
+  setTimeout(swap, 160);
+}
+
+document.getElementById('select-checker').addEventListener('click', () => showScreen('checker'));
+document.getElementById('select-generator').addEventListener('click', () => showScreen('generator'));
+document.getElementById('back-from-checker').addEventListener('click', () => showScreen('select'));
+document.getElementById('back-from-generator').addEventListener('click', () => showScreen('select'));
+document.getElementById('jump-to-generator').addEventListener('click', () => showScreen('generator'));
+document.getElementById('jump-to-checker').addEventListener('click', () => showScreen('checker'));
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && activeScreen !== 'select') showScreen('select');
+});
+
+// ---------- Session badge ----------
+(function initSession(){
+  const el = document.getElementById('session-id');
+  if (!el) return;
+  const bytes = new Uint8Array(3);
+  crypto.getRandomValues(bytes);
+  el.textContent = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+})();
+
+// ---------- Strength checker ----------
+const pwInput = document.getElementById('pw-input');
+const toggleVis = document.getElementById('toggle-visibility');
+const statusLabel = document.getElementById('status-label');
+const statusDesc = document.getElementById('status-desc');
+const dialBits = document.getElementById('dial-bits');
+const dialProgress = document.getElementById('dial-progress');
+const flagsBox = document.getElementById('flags');
+const crackBox = document.getElementById('status-crack');
+const crackTime = document.getElementById('crack-time');
+
+const CIRCUMFERENCE = 2 * Math.PI * 58; // ~364.4
+
+const checkIds = {
+  length: 'chk-length', upper: 'chk-upper', lower: 'chk-lower',
+  number: 'chk-number', symbol: 'chk-symbol', unique: 'chk-unique'
+};
+
+const commonPasswords = new Set([
+  'password','123456','12345678','qwerty','abc123','111111','123456789',
+  'letmein','welcome','monkey','password1','admin','iloveyou','000000',
+  'qwerty123','dragon','sunshine','princess','football','1234567890'
+]);
+
+function analyze(pw){
+  const len = pw.length;
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasLower = /[a-z]/.test(pw);
+  const hasNumber = /[0-9]/.test(pw);
+  const hasSymbol = /[^A-Za-z0-9]/.test(pw);
+  const noRepeatRuns = !/(.)\1\1/.test(pw);
+
+  let pool = 0;
+  if (hasUpper) pool += 26;
+  if (hasLower) pool += 26;
+  if (hasNumber) pool += 10;
+  if (hasSymbol) pool += 32;
+  const entropy = len > 0 && pool > 0 ? Math.round(len * Math.log2(pool)) : 0;
+
+  const flags = [];
+  if (len > 0 && commonPasswords.has(pw.toLowerCase())) {
+    flags.push('Matches a top commonly leaked password — do not use.');
+  }
+  if (/^(0123|1234|2345|3456|4567|5678|6789|abcd|bcde|cdef|qwer|asdf|zxcv)/i.test(pw)) {
+    flags.push('Contains a sequential or keyboard-walk pattern.');
+  }
+  if (!noRepeatRuns) {
+    flags.push('Repeated character runs reduce unpredictability.');
+  }
+  if (len > 0 && len < 8) {
+    flags.push('Below safe length — target 12+ characters.');
+  }
+
+  let score;
+  if (len === 0) score = -1;
+  else if (entropy < 28 || flags.some(f => f.includes('leaked'))) score = 0;
+  else if (entropy < 40) score = 1;
+  else if (entropy < 60) score = 2;
+  else if (entropy < 80) score = 3;
+  else score = 4;
+
+  return { len, hasUpper, hasLower, hasNumber, hasSymbol, noRepeatRuns, entropy, flags, score };
+}
+
+const GUESSES_PER_SECOND = 1e10; // offline attack against a fast hash, for illustrative purposes
+
+function formatCrackTime(entropy){
+  const combinations = Math.pow(2, entropy);
+  const seconds = combinations / (2 * GUESSES_PER_SECOND); // average case, on-device estimate
+
+  if (seconds < 1) return 'instantly';
+  const units = [
+    ['century', 3153600000],
+    ['year', 31536000],
+    ['day', 86400],
+    ['hour', 3600],
+    ['minute', 60],
+    ['second', 1],
+  ];
+  for (const [name, span] of units) {
+    const value = seconds / span;
+    if (value >= 1) {
+      const rounded = value >= 100 ? Math.round(value).toLocaleString() : value.toFixed(1).replace(/\.0$/, '');
+      if (name === 'century' && value > 10000) return 'longer than the age of the universe';
+      return `~${rounded} ${name}${value === 1 ? '' : 's'}`;
+    }
+  }
+  return 'instantly';
+}
+
+const scoreMeta = [
+  { label: 'VERY WEAK', color: 'var(--danger)', desc: 'Crackable almost instantly. Rebuild this password.' },
+  { label: 'WEAK', color: 'var(--danger)', desc: 'Vulnerable to automated guessing within hours.' },
+  { label: 'FAIR', color: 'var(--warn)', desc: 'Usable in a pinch, but add length or variety.' },
+  { label: 'STRONG', color: 'var(--accent)', desc: 'Solid resistance against brute-force attacks.' },
+  { label: 'VERY STRONG', color: 'var(--accent)', desc: 'Excellent — well beyond practical cracking range.' },
+];
+
+function render(){
+  const pw = pwInput.value;
+  const r = analyze(pw);
+
+  if (pw.length === 0) {
+    statusLabel.textContent = 'STANDBY';
+    statusLabel.style.color = 'var(--muted)';
+    statusDesc.textContent = 'Awaiting input to begin entropy scan.';
+    dialBits.textContent = '0';
+    dialProgress.style.stroke = 'var(--dim)';
+    dialProgress.style.strokeDashoffset = CIRCUMFERENCE;
+    crackBox.style.display = 'none';
+  } else {
+    const meta = scoreMeta[r.score];
+    statusLabel.textContent = meta.label;
+    statusLabel.style.color = meta.color;
+    statusDesc.textContent = meta.desc;
+    dialBits.textContent = r.entropy;
+    dialProgress.style.stroke = meta.color;
+    const fraction = Math.min((r.score + 1) / 5, 1);
+    dialProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - fraction);
+    crackBox.style.display = 'inline-flex';
+    crackTime.textContent = formatCrackTime(r.entropy);
+    crackTime.style.color = meta.color;
+  }
+
+  setCheck(checkIds.length, r.len >= 12);
+  setCheck(checkIds.upper, r.hasUpper);
+  setCheck(checkIds.lower, r.hasLower);
+  setCheck(checkIds.number, r.hasNumber);
+  setCheck(checkIds.symbol, r.hasSymbol);
+  setCheck(checkIds.unique, r.noRepeatRuns);
+
+  if (r.flags.length > 0) {
+    flagsBox.style.display = 'block';
+    flagsBox.innerHTML = r.flags.map(f => `<div class="flag">⚠ ${f}</div>`).join('');
+  } else {
+    flagsBox.style.display = 'none';
+    flagsBox.innerHTML = '';
+  }
+
+  renderSuggestions(pw);
+}
+
+function setCheck(id, pass){
+  document.getElementById(id).classList.toggle('pass', pass);
+}
+
+// ---------- Suggested rewrites ----------
+const suggestionsBox = document.getElementById('suggestions');
+const suggestionList = document.getElementById('suggestion-list');
+const btnResuggest = document.getElementById('btn-resuggest');
+const btnFreshSuggestion = document.getElementById('btn-fresh-suggestion');
+
+const LEET_MAP = { a:'@', e:'3', i:'1', o:'0', s:'$', t:'7', b:'8', g:'9' };
+const PAD_POOL = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+const EXTRA_DIGITS = '0123456789';
+const EXTRA_SYMBOLS = '!@#$%^&*-_';
+
+// Rewrites the user's own password into a stronger, still-recognizable variant:
+// selective leetspeak substitution, a guaranteed uppercase letter, minimum-length
+// padding, and an appended digit/symbol tail for extra entropy.
+function rewritePassword(base){
+  if (!base) return '';
+  let chars = base.split('').map(ch => {
+    const lower = ch.toLowerCase();
+    if (LEET_MAP[lower] && secureRandomInt(2) === 0) return LEET_MAP[lower];
+    return ch;
+  });
+
+  if (!/[A-Z]/.test(chars.join(''))) {
+    const idx = chars.findIndex(c => /[a-z]/.test(c));
+    if (idx !== -1) chars[idx] = chars[idx].toUpperCase();
+  }
+
+  while (chars.length < 14) {
+    chars.push(PAD_POOL[secureRandomInt(PAD_POOL.length)]);
+  }
+
+  chars.push(EXTRA_DIGITS[secureRandomInt(EXTRA_DIGITS.length)]);
+  chars.push(EXTRA_DIGITS[secureRandomInt(EXTRA_DIGITS.length)]);
+  chars.push(EXTRA_SYMBOLS[secureRandomInt(EXTRA_SYMBOLS.length)]);
+
+  return chars.join('');
+}
+
+function buildSuggestionItem(value, isFresh){
+  const item = document.createElement('div');
+  item.className = isFresh ? 'suggestion-item fresh' : 'suggestion-item';
+
+  const text = document.createElement('span');
+  text.className = 'suggestion-text';
+  text.textContent = value;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'suggestion-copy';
+  btn.textContent = 'COPY';
+  btn.setAttribute('aria-label', 'Copy suggested password');
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      btn.textContent = 'COPIED';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'COPY';
+        btn.classList.remove('copied');
+      }, 1400);
+    } catch (e) {
+      // clipboard unavailable; ignore silently
+    }
+  });
+
+  item.appendChild(text);
+  item.appendChild(btn);
+  return item;
+}
+
+function renderSuggestions(pw){
+  if (!pw) {
+    suggestionsBox.style.display = 'none';
+    suggestionList.innerHTML = '';
+    return;
+  }
+  suggestionsBox.style.display = 'block';
+  suggestionList.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    suggestionList.appendChild(buildSuggestionItem(rewritePassword(pw), false));
+  }
+}
+
+btnResuggest.addEventListener('click', () => renderSuggestions(pwInput.value));
+
+// Generates a fully independent strong password (16 chars, all character
+// classes) without touching the Forge screen's own slider/toggle state.
+function buildIndependentPassword(length){
+  const pools = ['ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz', '0123456789', '!@#$%^&*()-_=+[]{}?'];
+  const fullPool = pools.join('');
+  let result = pools.map(pool => pool[secureRandomInt(pool.length)]);
+  while (result.length < length) {
+    result.push(fullPool[secureRandomInt(fullPool.length)]);
+  }
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = secureRandomInt(i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result.slice(0, length).join('');
+}
+
+btnFreshSuggestion.addEventListener('click', () => {
+  suggestionList.appendChild(buildSuggestionItem(buildIndependentPassword(16), true));
+});
+
+pwInput.addEventListener('input', render);
+toggleVis.addEventListener('click', () => {
+  const isPw = pwInput.type === 'password';
+  pwInput.type = isPw ? 'text' : 'password';
+  toggleVis.textContent = isPw ? 'HIDE' : 'SHOW';
+});
+render();
+
+// ---------- Generator ----------
+const lengthSlider = document.getElementById('length-slider');
+const lengthVal = document.getElementById('length-val');
+const optUpper = document.getElementById('opt-upper');
+const optLower = document.getElementById('opt-lower');
+const optNumber = document.getElementById('opt-number');
+const optSymbol = document.getElementById('opt-symbol');
+const optAmbiguous = document.getElementById('opt-ambiguous');
+const pwOutput = document.getElementById('pw-output');
+const btnGenerate = document.getElementById('btn-generate');
+const btnCopy = document.getElementById('btn-copy');
+
+const SETS = {
+  upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  lower: 'abcdefghijklmnopqrstuvwxyz',
+  number: '0123456789',
+  symbol: '!@#$%^&*()-_=+[]{}?'
+};
+const AMBIGUOUS = /[Il1O0]/g;
+const SCRAMBLE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+lengthSlider.addEventListener('input', () => {
+  lengthVal.textContent = lengthSlider.value;
+});
+
+function secureRandomInt(max){
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return arr[0] % max;
+}
+
+function buildPassword(){
+  const length = parseInt(lengthSlider.value, 10);
+  let pools = [];
+  if (optUpper.checked) pools.push(SETS.upper);
+  if (optLower.checked) pools.push(SETS.lower);
+  if (optNumber.checked) pools.push(SETS.number);
+  if (optSymbol.checked) pools.push(SETS.symbol);
+
+  if (pools.length === 0) return null;
+  if (optAmbiguous.checked) pools = pools.map(p => p.replace(AMBIGUOUS, ''));
+
+  const fullPool = pools.join('');
+  let result = pools.map(pool => pool[secureRandomInt(pool.length)]);
+
+  while (result.length < length) {
+    result.push(fullPool[secureRandomInt(fullPool.length)]);
+  }
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = secureRandomInt(i + 1);
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result.slice(0, length).join('');
+}
+
+function scrambleReveal(finalPw){
+  if (prefersReducedMotion) {
+    pwOutput.textContent = finalPw;
+    return;
+  }
+  const len = finalPw.length;
+  let frame = 0;
+  const totalFrames = 14;
+  const interval = setInterval(() => {
+    frame++;
+    const revealCount = Math.floor((frame / totalFrames) * len);
+    let display = '';
+    for (let i = 0; i < len; i++) {
+      if (i < revealCount) display += finalPw[i];
+      else display += SCRAMBLE_CHARS[secureRandomInt(SCRAMBLE_CHARS.length)];
+    }
+    pwOutput.textContent = display;
+    if (frame >= totalFrames) {
+      clearInterval(interval);
+      pwOutput.textContent = finalPw;
+    }
+  }, 28);
+}
+
+function generatePassword(){
+  const pw = buildPassword();
+  if (!pw) {
+    pwOutput.textContent = 'SELECT AT LEAST ONE CHARACTER TYPE';
+    return;
+  }
+  scrambleReveal(pw);
+}
+
+btnGenerate.addEventListener('click', generatePassword);
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && activeScreen === 'generator' && document.activeElement.tagName !== 'BUTTON') {
+    generatePassword();
+  }
+});
+
+btnCopy.addEventListener('click', async () => {
+  const text = pwOutput.textContent;
+  if (!text || text === 'READY' || text === 'SELECT AT LEAST ONE CHARACTER TYPE') return;
+  try {
+    await navigator.clipboard.writeText(text);
+    btnCopy.textContent = 'COPIED';
+    btnCopy.classList.add('copied');
+    setTimeout(() => {
+      btnCopy.textContent = 'COPY';
+      btnCopy.classList.remove('copied');
+    }, 1400);
+  } catch (e) {
+    // clipboard unavailable; ignore silently
+  }
+});
+
+generatePassword();
+</script>
+</body>
+</html>
